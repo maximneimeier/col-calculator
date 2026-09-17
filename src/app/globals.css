@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 
 :root {
   --background: #ffffff;
@@ -47,6 +48,14 @@ body {
   font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
   font-feature-settings: "ss03" on, "calt" on;
   -webkit-font-smoothing: antialiased;
+}
+
+summary {
+  list-style: none;
+}
+
+details:not([open]) > ul {
+  display: none;
 }
 
 input[type="number"]::-webkit-outer-spin-button,

@@ -1,0 +1,23 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+/// Investment instrument (ETF, bond, etc.). Percent fields are stored as
+/// percentage points, e.g. 8.31 means 8.31%.
+model Instrument {
+  id                String   @id @default(cuid())
+  name              String   @unique
+  type              String
+  priceReturn       Float
+  dividendYield     Float
+  standardDeviation Float
+  valueAtRisk       Float
+  sortOrder         Int      @unique
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}

@@ -1,6 +1,8 @@
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import type { Locale } from "@/lib/i18n";
 
-export function Header() {
+export function Header({ locale }: { locale: Locale }) {
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-sm">
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-6">
@@ -12,7 +14,10 @@ export function Header() {
             COL Calculator
           </span>
         </div>
-        <ThemeToggle />
+        <div className="flex items-center gap-2">
+          <LanguageSwitcher locale={locale} />
+          <ThemeToggle locale={locale} />
+        </div>
       </div>
     </header>
   );

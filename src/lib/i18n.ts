@@ -35,6 +35,8 @@ const dictionaries = {
       incomeRequired: "Bitte Nettoeinkommen eingeben.",
       tabCosts: "Kosten",
       tabGrowth: "Lohnentwicklung",
+      tabSalary: "Gehalt",
+      tabRates: "Verzinsung",
     },
     form: {
       income: "Einkommen",
@@ -68,6 +70,13 @@ const dictionaries = {
       perMonth: "€ / Monat",
       perMonthChf: "CHF / Monat",
       calculate: "Berechnen",
+      ratesHint:
+        "Diese Annahmen kannst du frei setzen. Die Inflation steuert die inflationsbereinigte Lohnentwicklung.",
+      inflation: "Inflation",
+      marketReturn: "Kapitalmarktverzinsung",
+      propertyReturn: "Immobilien Verzinsung",
+      cashReturn: "Cash Verzinsung",
+      rentalYield: "Mietrenditen",
     },
     payroll: {
       title: "Brutto-Netto",
@@ -125,6 +134,9 @@ const dictionaries = {
       growthYears: "Jahre",
       growthHint:
         "Brutto und Netto über die nächsten Jahre, mit deiner Lohnsteigerung.",
+      growthHintReal:
+        "Brutto und Netto in heutiger Kaufkraft, nach Abzug der Inflation.",
+      inflationAdjusted: "Inflationsbereinigt",
     },
     segments: {
       "cold-rent": "Kaltmiete",
@@ -160,6 +172,8 @@ const dictionaries = {
       incomeRequired: "Please enter your net income.",
       tabCosts: "Costs",
       tabGrowth: "Pay growth",
+      tabSalary: "Salary",
+      tabRates: "Returns",
     },
     form: {
       income: "Income",
@@ -193,6 +207,13 @@ const dictionaries = {
       perMonth: "€ / month",
       perMonthChf: "CHF / month",
       calculate: "Calculate",
+      ratesHint:
+        "You can set these assumptions freely. Inflation drives the inflation-adjusted pay growth view.",
+      inflation: "Inflation",
+      marketReturn: "Market return",
+      propertyReturn: "Property return",
+      cashReturn: "Cash return",
+      rentalYield: "Rental yield",
     },
     payroll: {
       title: "Gross to net",
@@ -250,6 +271,9 @@ const dictionaries = {
       growthYears: "Years",
       growthHint:
         "Gross and net over the coming years, using your salary increase.",
+      growthHintReal:
+        "Gross and net in today's purchasing power, after inflation.",
+      inflationAdjusted: "Inflation-adjusted",
     },
     segments: {
       "cold-rent": "Base rent",

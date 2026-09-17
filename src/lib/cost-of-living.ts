@@ -175,6 +175,21 @@ export const MIN_HORIZON = 3;
 export const MAX_HORIZON = 20;
 export const DEFAULT_HORIZON = 10;
 
+export const DEFAULT_INFLATION = 2;
+export const DEFAULT_MARKET_RETURN = 8;
+export const DEFAULT_PROPERTY_RETURN = 5;
+export const DEFAULT_CASH_RETURN = 2;
+export const DEFAULT_RENTAL_YIELD = 2.5;
+
+export function parseRate(
+  value: string | undefined,
+  fallback: number
+): number {
+  const parsed = parseAmount(value);
+  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100) return fallback;
+  return parsed;
+}
+
 export type SalaryYearPoint = {
   yearOffset: number;
   calendarYear: number;
@@ -222,6 +237,26 @@ export function projectSalaryPath(params: {
       calendarYear: startYear + year,
       gross: Math.round(gross0 * factor),
       net: Math.round(net0 * factor),
+    };
+  });
+}
+
+export function adjustSalaryPathForInflation(
+  points: SalaryYearPoint[],
+  inflationPercent: number
+): SalaryYearPoint[] {
+  const rate =
+    Number.isFinite(inflationPercent) && inflationPercent > 0
+      ? inflationPercent
+      : 0;
+  if (rate === 0) return points;
+
+  return points.map((point) => {
+    const divisor = (1 + rate / 100) ** point.yearOffset;
+    return {
+      ...point,
+      gross: Math.round(point.gross / divisor),
+      net: Math.round(point.net / divisor),
     };
   });
 }

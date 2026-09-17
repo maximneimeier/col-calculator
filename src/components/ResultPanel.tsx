@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { CostBreakdownChart } from "@/components/CostBreakdownChart";
 import { SalaryGrowthChart } from "@/components/SalaryGrowthChart";
 import {
+  adjustSalaryPathForInflation,
   DEFAULT_HORIZON,
   MAX_HORIZON,
   MIN_HORIZON,
@@ -21,6 +22,7 @@ export function ResultPanel({
   raiseEveryYears,
   defaultView,
   defaultHorizon,
+  inflationPercent = 0,
 }: {
   result: CalculationResult;
   locale: Locale;
@@ -28,6 +30,7 @@ export function ResultPanel({
   raiseEveryYears: RaiseInterval;
   defaultView?: string;
   defaultHorizon?: number;
+  inflationPercent?: number;
 }) {
   const t = getDictionary(locale);
   const [horizonInput, setHorizonInput] = useState(
@@ -46,6 +49,10 @@ export function ResultPanel({
         horizon,
       }),
     [horizon, raiseEveryYears, raisePercent, result.grossMonthly, result.monthlyIncome]
+  );
+  const realPoints = useMemo(
+    () => adjustSalaryPathForInflation(points, inflationPercent),
+    [inflationPercent, points]
   );
 
   return (
@@ -85,22 +92,40 @@ export function ResultPanel({
         <CostBreakdownChart result={result} locale={locale} embedded />
       </div>
 
-      <div className="js-growth-view mt-5">
+      <div className="js-growth-view mt-5 [&:has(#inflation-adjusted:checked)_.js-nominal-growth]:hidden [&:has(#inflation-adjusted:checked)_.js-real-growth]:block [&:has(#inflation-adjusted:checked)_.js-nominal-hint]:hidden [&:has(#inflation-adjusted:checked)_.js-real-hint]:block">
         <div className="flex flex-wrap items-end justify-between gap-4">
-          <p className="max-w-xs text-sm text-muted">{t.chart.growthHint}</p>
-          <label className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted">
-            {t.chart.growthYears}
-            <input
-              type="number"
-              min={MIN_HORIZON}
-              max={MAX_HORIZON}
-              value={horizonInput}
-              inputMode="numeric"
-              className="w-16 rounded-lg border border-border bg-background px-2 py-1.5 text-sm font-medium text-foreground outline-none focus:border-accent focus:ring-2 focus:ring-accent/10"
-              onChange={(event) => setHorizonInput(event.currentTarget.value)}
-              onBlur={() => setHorizonInput(String(horizon))}
-            />
-          </label>
+          <p className="js-nominal-hint max-w-xs text-sm text-muted">
+            {t.chart.growthHint}
+          </p>
+          <p className="js-real-hint hidden max-w-xs text-sm text-muted">
+            {t.chart.growthHintReal}
+          </p>
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <label
+              htmlFor="inflation-adjusted"
+              className="flex cursor-pointer items-center gap-2 text-xs font-medium text-muted"
+            >
+              <input
+                id="inflation-adjusted"
+                type="checkbox"
+                className="size-4 cursor-pointer accent-[var(--accent)]"
+              />
+              {t.chart.inflationAdjusted}
+            </label>
+            <label className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted">
+              {t.chart.growthYears}
+              <input
+                type="number"
+                min={MIN_HORIZON}
+                max={MAX_HORIZON}
+                value={horizonInput}
+                inputMode="numeric"
+                className="w-16 rounded-lg border border-border bg-background px-2 py-1.5 text-sm font-medium text-foreground outline-none focus:border-accent focus:ring-2 focus:ring-accent/10"
+                onChange={(event) => setHorizonInput(event.currentTarget.value)}
+                onBlur={() => setHorizonInput(String(horizon))}
+              />
+            </label>
+          </div>
         </div>
 
         <div className="mt-4 flex items-center gap-4 text-xs text-muted">
@@ -114,7 +139,12 @@ export function ResultPanel({
           </span>
         </div>
 
-        <SalaryGrowthChart points={points} locale={locale} />
+        <div className="js-nominal-growth">
+          <SalaryGrowthChart points={points} locale={locale} />
+        </div>
+        <div className="js-real-growth hidden">
+          <SalaryGrowthChart points={realPoints} locale={locale} />
+        </div>
       </div>
     </div>
   );

@@ -3,10 +3,16 @@ import { Header } from "@/components/Header";
 import { ResultPanel } from "@/components/ResultPanel";
 import {
   calculateCostOfLiving,
+  DEFAULT_CASH_RETURN,
+  DEFAULT_INFLATION,
+  DEFAULT_MARKET_RETURN,
+  DEFAULT_PROPERTY_RETURN,
+  DEFAULT_RENTAL_YIELD,
   formatAmountInput,
   parseAmount,
   parseHorizon,
   parseRaiseInterval,
+  parseRate,
   resolveNetIncome,
 } from "@/lib/cost-of-living";
 import { getDictionary } from "@/lib/i18n";
@@ -28,6 +34,12 @@ type HomeProps = {
     raiseEvery?: string;
     view?: string;
     horizon?: string;
+    formView?: string;
+    inflation?: string;
+    marketReturn?: string;
+    propertyReturn?: string;
+    cashReturn?: string;
+    rentalYield?: string;
     calculate?: string;
   }>;
 };
@@ -50,6 +62,14 @@ export default async function Home({ searchParams }: HomeProps) {
   const insurance = params.insurance ?? "";
   const telecom = params.telecom ?? "";
   const raiseEvery = parseRaiseInterval(params.raiseEvery);
+  const inflation = parseRate(params.inflation, DEFAULT_INFLATION);
+  const marketReturn = parseRate(params.marketReturn, DEFAULT_MARKET_RETURN);
+  const propertyReturn = parseRate(
+    params.propertyReturn,
+    DEFAULT_PROPERTY_RETURN
+  );
+  const cashReturn = parseRate(params.cashReturn, DEFAULT_CASH_RETURN);
+  const rentalYield = parseRate(params.rentalYield, DEFAULT_RENTAL_YIELD);
 
   const result = hasCalculated
     ? calculateCostOfLiving({
@@ -91,6 +111,15 @@ export default async function Home({ searchParams }: HomeProps) {
               defaultTelecom={formatAmountInput(telecom, locale)}
               defaultRaisePercent={formatAmountInput(params.raisePercent, locale)}
               defaultRaiseEvery={raiseEvery}
+              defaultFormView={params.formView}
+              defaultInflation={formatAmountInput(String(inflation), locale)}
+              defaultMarketReturn={formatAmountInput(String(marketReturn), locale)}
+              defaultPropertyReturn={formatAmountInput(
+                String(propertyReturn),
+                locale
+              )}
+              defaultCashReturn={formatAmountInput(String(cashReturn), locale)}
+              defaultRentalYield={formatAmountInput(String(rentalYield), locale)}
             />
 
             <div className="w-full">
@@ -102,6 +131,7 @@ export default async function Home({ searchParams }: HomeProps) {
                   raiseEveryYears={raiseEvery}
                   defaultView={params.view}
                   defaultHorizon={parseHorizon(params.horizon)}
+                  inflationPercent={inflation}
                 />
               )}
 

@@ -2,6 +2,11 @@
 
 import { useMemo, useState } from "react";
 import {
+  DEFAULT_CASH_RETURN,
+  DEFAULT_INFLATION,
+  DEFAULT_MARKET_RETURN,
+  DEFAULT_PROPERTY_RETURN,
+  DEFAULT_RENTAL_YIELD,
   formatAmountInput,
   netFromTaxRate,
   parseAmount,
@@ -99,6 +104,12 @@ type CostCalculatorProps = {
   defaultTelecom?: string;
   defaultRaisePercent?: string;
   defaultRaiseEvery?: 1 | 2 | 3;
+  defaultFormView?: string;
+  defaultInflation?: string;
+  defaultMarketReturn?: string;
+  defaultPropertyReturn?: string;
+  defaultCashReturn?: string;
+  defaultRentalYield?: string;
 };
 
 function initialSalaryMode(defaultSalaryMode?: string): SalaryMode {
@@ -119,6 +130,12 @@ export function CostCalculator({
   defaultTelecom,
   defaultRaisePercent,
   defaultRaiseEvery = 1,
+  defaultFormView,
+  defaultInflation,
+  defaultMarketReturn,
+  defaultPropertyReturn,
+  defaultCashReturn,
+  defaultRentalYield,
 }: CostCalculatorProps) {
   const t = getDictionary(locale);
   const perMonth = t.form.perMonth;
@@ -138,13 +155,47 @@ export function CostCalculator({
     computedNet != null
       ? formatAmountInput(String(computedNet), locale)
       : net;
+  const startOnRates = defaultFormView === "rates";
+  const percentPlaceholder = locale === "en" ? "2.5" : "2,5";
 
   return (
     <form
       action="/"
       method="get"
-      className="flex w-full flex-col gap-6 [&:has(#salary-mode-net:checked)_.js-tax-fields]:hidden [&:has(#salary-mode-tax:checked)_.js-net-fields]:hidden"
+      className="flex w-full flex-col gap-6 [&:has(#salary-mode-net:checked)_.js-tax-fields]:hidden [&:has(#salary-mode-tax:checked)_.js-net-fields]:hidden [&:has(#form-view-rates:checked)_.js-salary-view]:hidden [&:has(#form-view-salary:checked)_.js-rates-view]:hidden"
     >
+      <div
+        role="tablist"
+        aria-label={t.home.title}
+        className="grid grid-cols-2 gap-1 rounded-lg border border-border bg-background p-1"
+      >
+        <label className="flex cursor-pointer items-center justify-center rounded-md px-2 py-1.5 text-xs font-medium text-muted transition-colors hover:text-foreground has-[:checked]:bg-foreground has-[:checked]:text-background">
+          <input
+            id="form-view-salary"
+            type="radio"
+            name="formView"
+            value="salary"
+            defaultChecked={!startOnRates}
+            className="sr-only"
+            onChange={() => {}}
+          />
+          {t.home.tabSalary}
+        </label>
+        <label className="flex cursor-pointer items-center justify-center rounded-md px-2 py-1.5 text-xs font-medium text-muted transition-colors hover:text-foreground has-[:checked]:bg-foreground has-[:checked]:text-background">
+          <input
+            id="form-view-rates"
+            type="radio"
+            name="formView"
+            value="rates"
+            defaultChecked={startOnRates}
+            className="sr-only"
+            onChange={() => {}}
+          />
+          {t.home.tabRates}
+        </label>
+      </div>
+
+      <div className="js-salary-view flex flex-col gap-6">
       <div className={cardClass}>
         <div className="space-y-4 text-left">
           <SectionLabel>{t.form.salary}</SectionLabel>
@@ -253,42 +304,29 @@ export function CostCalculator({
                   {t.form.percent}
                 </span>
               </div>
-              <div
-                role="radiogroup"
-                aria-label={t.form.raiseInterval}
-                className="grid min-w-0 flex-1 grid-cols-3 gap-0.5 rounded-md border border-border bg-background p-0.5"
-              >
-                {([1, 2, 3] as const).map((years) => {
-                  const full =
-                    years === 1
-                      ? t.form.raiseYearly
-                      : years === 2
-                        ? t.form.raiseEvery2
-                        : t.form.raiseEvery3;
-                  const short =
-                    years === 1
-                      ? t.form.raiseYearlyShort
-                      : years === 2
-                        ? t.form.raiseEvery2Short
-                        : t.form.raiseEvery3Short;
-                  return (
-                    <label
-                      key={years}
-                      title={full}
-                      className="flex cursor-pointer items-center justify-center rounded px-1 py-1 text-center text-[11px] font-medium leading-none text-muted transition-colors hover:text-foreground has-[:checked]:bg-foreground has-[:checked]:text-background"
-                    >
-                      <input
-                        type="radio"
-                        name="raiseEvery"
-                        value={years}
-                        defaultChecked={defaultRaiseEvery === years}
-                        aria-label={full}
-                        className="sr-only"
-                      />
-                      {short}
-                    </label>
-                  );
-                })}
+              <div className="relative min-w-0 flex-1">
+                <select
+                  id="raise-every"
+                  name="raiseEvery"
+                  aria-label={t.form.raiseInterval}
+                  defaultValue={String(defaultRaiseEvery)}
+                  className={`${inputClass} cursor-pointer appearance-none px-2 py-1.5 pr-7 text-sm`}
+                >
+                  <option value="1">{t.form.raiseYearly}</option>
+                  <option value="2">{t.form.raiseEvery2}</option>
+                  <option value="3">{t.form.raiseEvery3}</option>
+                </select>
+                <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-muted">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden>
+                    <path
+                      d="M6 9l6 6 6-6"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </span>
               </div>
             </div>
           </div>
@@ -356,17 +394,85 @@ export function CostCalculator({
             suffix={perMonth}
             locale={locale}
           />
-
-          <button
-            type="submit"
-            name="calculate"
-            value="1"
-            className="w-full cursor-pointer rounded-lg bg-foreground px-4 py-2.5 text-sm font-medium text-background transition-colors hover:bg-foreground/90 active:scale-[0.99]"
-          >
-            {t.form.calculate}
-          </button>
         </div>
       </div>
+      </div>
+
+      <div className={`js-rates-view ${cardClass}`}>
+        <div className="space-y-4 text-left">
+          <SectionLabel>{t.home.tabRates}</SectionLabel>
+          <p className="text-sm text-muted">{t.form.ratesHint}</p>
+          <AmountField
+            id="inflation"
+            name="inflation"
+            label={t.form.inflation}
+            placeholder="2"
+            defaultValue={
+              defaultInflation ||
+              formatAmountInput(String(DEFAULT_INFLATION), locale)
+            }
+            suffix={t.form.percent}
+            locale={locale}
+          />
+          <AmountField
+            id="market-return"
+            name="marketReturn"
+            label={t.form.marketReturn}
+            placeholder="8"
+            defaultValue={
+              defaultMarketReturn ||
+              formatAmountInput(String(DEFAULT_MARKET_RETURN), locale)
+            }
+            suffix={t.form.percent}
+            locale={locale}
+          />
+          <AmountField
+            id="property-return"
+            name="propertyReturn"
+            label={t.form.propertyReturn}
+            placeholder="5"
+            defaultValue={
+              defaultPropertyReturn ||
+              formatAmountInput(String(DEFAULT_PROPERTY_RETURN), locale)
+            }
+            suffix={t.form.percent}
+            locale={locale}
+          />
+          <AmountField
+            id="cash-return"
+            name="cashReturn"
+            label={t.form.cashReturn}
+            placeholder="2"
+            defaultValue={
+              defaultCashReturn ||
+              formatAmountInput(String(DEFAULT_CASH_RETURN), locale)
+            }
+            suffix={t.form.percent}
+            locale={locale}
+          />
+          <AmountField
+            id="rental-yield"
+            name="rentalYield"
+            label={t.form.rentalYield}
+            placeholder={percentPlaceholder}
+            defaultValue={
+              defaultRentalYield ||
+              formatAmountInput(String(DEFAULT_RENTAL_YIELD), locale)
+            }
+            suffix={t.form.percent}
+            locale={locale}
+          />
+        </div>
+      </div>
+
+      <button
+        type="submit"
+        name="calculate"
+        value="1"
+        className="w-full cursor-pointer rounded-lg bg-foreground px-4 py-2.5 text-sm font-medium text-background transition-colors hover:bg-foreground/90 active:scale-[0.99]"
+      >
+        {t.form.calculate}
+      </button>
     </form>
   );
 }

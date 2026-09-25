@@ -10,6 +10,7 @@
   --surface: #f4f5f7;
   --accent: #266df0;
   --accent-hover: #1d5ad4;
+  --interest: #f5a24a;
   --card: #ffffff;
   --shadow: rgba(0, 0, 0, 0.04);
 }
@@ -23,6 +24,7 @@
   --surface: #121417;
   --accent: #4d85f5;
   --accent-hover: #266df0;
+  --interest: #f6b56a;
   --card: #121417;
   --shadow: rgba(0, 0, 0, 0.3);
 }
@@ -36,6 +38,7 @@
   --color-surface: var(--surface);
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
+  --color-interest: var(--interest);
   --color-card: var(--card);
   --color-shadow: var(--shadow);
   --font-sans: var(--font-inter);
@@ -54,7 +57,9 @@ summary {
   list-style: none;
 }
 
-details:not([open]) > ul {
+details:not([open]) > ul,
+details:not([open]) > .js-menu,
+details:not([open]) > .js-panel {
   display: none;
 }
 
@@ -67,4 +72,16 @@ input[type="number"]::-webkit-inner-spin-button {
 input[type="number"] {
   -moz-appearance: textfield;
   appearance: textfield;
+}
+
+@media (min-width: 1024px) {
+  .js-app-sidebar:has(.js-nav-section:checked) {
+    width: 36rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .js-app-sidebar:has(.js-nav-section:checked) {
+    width: 38rem;
+  }
 }

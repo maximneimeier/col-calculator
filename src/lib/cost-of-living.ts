@@ -6,6 +6,8 @@ export type RaiseInterval = (typeof raiseIntervals)[number];
 export type CalculationInput = {
   monthlyIncome: number;
   grossMonthly?: number;
+  extraMonthlyNet?: number;
+  extraMonthlyGross?: number;
   coldRent: number;
   utilities: number;
   groceries: number;
@@ -36,6 +38,10 @@ export type CostSegment = {
 export type CalculationResult = {
   monthlyIncome: number;
   grossMonthly?: number;
+  salaryMonthlyNet: number;
+  salaryMonthlyGross?: number;
+  extraMonthlyNet: number;
+  extraMonthlyGross: number;
   totalCosts: number;
   remaining: number;
   segments: CostSegment[];
@@ -98,8 +104,19 @@ export function calculateCostOfLiving(
     },
   ];
 
+  const extraMonthlyNet = Math.max(0, input.extraMonthlyNet ?? 0);
+  const extraMonthlyGross = Math.max(0, input.extraMonthlyGross ?? 0);
+  const salaryMonthlyNet = input.monthlyIncome;
+  const totalMonthlyNet = salaryMonthlyNet + extraMonthlyNet;
+  const salaryMonthlyGross =
+    Number.isFinite(input.grossMonthly) && (input.grossMonthly ?? 0) > 0
+      ? input.grossMonthly
+      : undefined;
+  const totalMonthlyGross =
+    (salaryMonthlyGross ?? salaryMonthlyNet) + extraMonthlyGross;
+
   const totalCosts = costItems.reduce((sum, item) => sum + item.amount, 0);
-  const remaining = input.monthlyIncome - totalCosts;
+  const remaining = totalMonthlyNet - totalCosts;
 
   const segments: CostSegment[] = [
     ...costItems.filter((item) => item.amount > 0),
@@ -112,21 +129,120 @@ export function calculateCostOfLiving(
   ].filter((segment) => segment.amount > 0);
 
   return {
-    monthlyIncome: input.monthlyIncome,
-    grossMonthly:
-      Number.isFinite(input.grossMonthly) && (input.grossMonthly ?? 0) > 0
-        ? input.grossMonthly
-        : undefined,
+    monthlyIncome: totalMonthlyNet,
+    grossMonthly: totalMonthlyGross > 0 ? totalMonthlyGross : undefined,
+    salaryMonthlyNet,
+    salaryMonthlyGross,
+    extraMonthlyNet,
+    extraMonthlyGross,
     totalCosts,
     remaining,
     segments,
-    raise: projectSalaryRaise(
-      input.monthlyIncome,
-      remaining,
-      input.raisePercent,
-      input.raiseEveryYears
-    ),
+    raise: (() => {
+      const raise = projectSalaryRaise(
+        salaryMonthlyNet,
+        remaining,
+        input.raisePercent,
+        input.raiseEveryYears
+      );
+      if (!raise || extraMonthlyNet <= 0) return raise;
+      return {
+        ...raise,
+        nextNetMonthly: raise.nextNetMonthly + extraMonthlyNet,
+      };
+    })(),
   };
+}
+
+export const extraIncomeKinds = [1, 2, 3, 4, 5, 6, 7] as const;
+export type ExtraIncomeKind = (typeof extraIncomeKinds)[number];
+export const CAPITAL_GAINS_TAX_RATE = 25;
+
+export type ExtraIncomeRow = {
+  id: string;
+  kind: ExtraIncomeKind;
+  amount: string;
+};
+
+export function isExtraIncomeKind(value: number): value is ExtraIncomeKind {
+  return extraIncomeKinds.includes(value as ExtraIncomeKind);
+}
+
+export function extraIncomeTaxRate(
+  kind: ExtraIncomeKind,
+  personalRate: number
+): number {
+  return kind === 5 ? CAPITAL_GAINS_TAX_RATE : personalRate;
+}
+
+function asParamList(value?: string | string[]): string[] {
+  if (!value) return [];
+  return Array.isArray(value) ? value : [value];
+}
+
+export function parseExtraIncomeRows(
+  types?: string | string[],
+  amounts?: string | string[]
+): ExtraIncomeRow[] {
+  const kinds = asParamList(types);
+  const values = asParamList(amounts);
+  const length = Math.min(kinds.length, values.length);
+  const rows: ExtraIncomeRow[] = [];
+
+  for (let index = 0; index < length; index += 1) {
+    const kind = Number(kinds[index]);
+    if (!isExtraIncomeKind(kind)) continue;
+    rows.push({
+      id: `extra-${index}-${kind}`,
+      kind,
+      amount: values[index] ?? "",
+    });
+  }
+
+  return rows;
+}
+
+export function resolvePersonalTaxRate(params: {
+  taxRate?: string;
+  gross?: string;
+  income?: string;
+}): number {
+  const parsed = parseAmount(params.taxRate);
+  if (Number.isFinite(parsed) && parsed >= 0 && parsed <= 100) return parsed;
+
+  const gross = parseAmount(params.gross);
+  const net = parseAmount(params.income);
+  if (gross > 0 && Number.isFinite(net) && net >= 0 && net <= gross) {
+    return Math.round((1 - net / gross) * 1000) / 10;
+  }
+
+  return 0;
+}
+
+export function extraIncomeMonthlyTotals(
+  rows: ExtraIncomeRow[],
+  period: SalaryPeriod,
+  personalRate: number
+): { gross: number; net: number } {
+  const rate = Number.isFinite(personalRate) && personalRate >= 0 && personalRate <= 100
+    ? personalRate
+    : 0;
+
+  return rows.reduce(
+    (totals, row) => {
+      const monthlyGross = toMonthlyAmount(parseAmount(row.amount), period);
+      if (!Number.isFinite(monthlyGross) || monthlyGross <= 0) return totals;
+      const net = netFromTaxRate(
+        monthlyGross,
+        extraIncomeTaxRate(row.kind, rate)
+      );
+      return {
+        gross: totals.gross + monthlyGross,
+        net: totals.net + (net ?? 0),
+      };
+    },
+    { gross: 0, net: 0 }
+  );
 }
 
 export function parseRaiseInterval(value: string | undefined): RaiseInterval {
@@ -172,7 +288,7 @@ export function projectSalaryRaise(
 }
 
 export const MIN_HORIZON = 3;
-export const MAX_HORIZON = 20;
+export const MAX_HORIZON = 100;
 export const DEFAULT_HORIZON = 10;
 
 export const DEFAULT_INFLATION = 2;
@@ -188,6 +304,33 @@ export function parseRate(
   const parsed = parseAmount(value);
   if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100) return fallback;
   return parsed;
+}
+
+export type SalaryPeriod = "month" | "year";
+
+export function parseSalaryPeriod(value: string | undefined): SalaryPeriod {
+  return value === "year" ? "year" : "month";
+}
+
+export function toMonthlyAmount(
+  value: number,
+  period: SalaryPeriod
+): number {
+  if (!Number.isFinite(value)) return value;
+  return period === "year" ? Math.round(value / 12) : value;
+}
+
+export function convertSalaryPeriod(
+  value: string | undefined,
+  from: SalaryPeriod,
+  to: SalaryPeriod,
+  locale: Locale
+): string {
+  if (from === to) return formatAmountInput(value, locale);
+  const num = parseAmount(value);
+  if (!Number.isFinite(num)) return value ?? "";
+  const next = to === "year" ? num * 12 : num / 12;
+  return formatAmountInput(String(Math.round(next)), locale);
 }
 
 export type SalaryYearPoint = {
@@ -237,6 +380,86 @@ export function projectSalaryPath(params: {
       calendarYear: startYear + year,
       gross: Math.round(gross0 * factor),
       net: Math.round(net0 * factor),
+    };
+  });
+}
+
+export const savingsRateKinds = ["market", "property", "cash", "rental"] as const;
+export type SavingsRateKind = (typeof savingsRateKinds)[number];
+
+export function parseSavingsRateKind(value: string | undefined): SavingsRateKind {
+  if (value === "property" || value === "cash" || value === "rental") return value;
+  return "market";
+}
+
+export function resolveSavingsRate(
+  kind: SavingsRateKind,
+  rates: {
+    marketReturn: number;
+    propertyReturn: number;
+    cashReturn: number;
+    rentalYield: number;
+  }
+): number {
+  if (kind === "property") return rates.propertyReturn;
+  if (kind === "cash") return rates.cashReturn;
+  if (kind === "rental") return rates.rentalYield;
+  return rates.marketReturn;
+}
+
+export type WealthYearPoint = {
+  yearOffset: number;
+  calendarYear: number;
+  wealth: number;
+  contribution: number;
+  cumulativeContribution: number;
+};
+
+export function projectWealthPath(params: {
+  leftoverMonthlyByYear: number[];
+  annualRate: number;
+  startYear?: number;
+}): WealthYearPoint[] {
+  const rate =
+    Number.isFinite(params.annualRate) && params.annualRate > -100
+      ? params.annualRate / 100
+      : 0;
+  const startYear = params.startYear ?? new Date().getFullYear();
+  let wealth = 0;
+  let cumulativeContribution = 0;
+
+  return params.leftoverMonthlyByYear.map((leftover, year) => {
+    const contribution =
+      Number.isFinite(leftover) && leftover > 0 ? Math.round(leftover * 12) : 0;
+    cumulativeContribution += contribution;
+    wealth = Math.round((wealth + contribution) * (1 + rate));
+    return {
+      yearOffset: year,
+      calendarYear: startYear + year,
+      wealth,
+      contribution,
+      cumulativeContribution,
+    };
+  });
+}
+
+export function adjustWealthPathForInflation(
+  points: WealthYearPoint[],
+  inflationPercent: number
+): WealthYearPoint[] {
+  const inflation =
+    Number.isFinite(inflationPercent) && inflationPercent > 0
+      ? inflationPercent
+      : 0;
+  if (inflation === 0) return points;
+
+  return points.map((point) => {
+    const divisor = (1 + inflation / 100) ** point.yearOffset;
+    return {
+      ...point,
+      wealth: Math.round(point.wealth / divisor),
+      contribution: Math.round(point.contribution / divisor),
+      cumulativeContribution: Math.round(point.cumulativeContribution / divisor),
     };
   });
 }

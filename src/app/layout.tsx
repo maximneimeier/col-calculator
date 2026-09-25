@@ -72,7 +72,7 @@ export default async function RootLayout({
   return (
     <html
       lang={locale}
-      className={`${inter.variable} ${interDisplay.variable} h-full antialiased`}
+        className={`${inter.variable} ${interDisplay.variable} h-dvh antialiased lg:overflow-clip`}
       suppressHydrationWarning
     >
       <head>
@@ -81,7 +81,7 @@ export default async function RootLayout({
         />
       </head>
       <body
-        className="min-h-full flex flex-col bg-background text-foreground"
+        className="flex h-full flex-col bg-background text-foreground lg:overflow-clip"
         suppressHydrationWarning
       >
         {children}
